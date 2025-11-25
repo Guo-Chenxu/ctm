@@ -1,0 +1,13 @@
+{
+  "providers": [
+    {
+      "name": "example",
+      "description": "this is an example",
+      "env": {
+        "ANTHROPIC_BASE_URL": "https://example.com",
+        "ANTHROPIC_API_KEY": "sk-..."
+      }
+    }  
+  ],
+  "currentIndex": 0
+}
