@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 // GetConfigPath returns the path to the config file
@@ -76,5 +77,6 @@ func GetAllEnvKeys(config *Config) []string {
 	for key := range keySet {
 		keys = append(keys, key)
 	}
+	sort.Strings(keys)
 	return keys
 }

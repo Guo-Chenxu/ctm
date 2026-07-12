@@ -19,6 +19,7 @@ ctm/
 │   ├── root.go         # 根命令
 │   ├── list.go         # list 命令
 │   ├── use.go          # use 命令
+│   ├── unset.go        # unset 命令
 │   ├── show.go         # show 命令
 │   ├── config.go       # config 命令
 │   └── init.go         # init 命令
@@ -63,31 +64,94 @@ go build -o ctm
 ctm list
 ```
 
-输出示例：
-
-```
-Available providers:
-* 0: gaccode
-  1: v3 cm
-  2: anyrouter
-```
-
 当前使用的配置会标记为绿色并带 `*` 前缀。
 
-### 2. 切换配置
+### 2. 初始化 Shell 配置
 
 ```bash
-eval $(ctm use 1)
+ctm init
 ```
 
-此命令会：
+`ctm init` 会根据当前 shell 自动写入：
 
-- 更新 `currentIndex` 为指定索引
-- 输出所有环境变量的 export 命令
-- 当前配置的环境变量设置为对应值
-- 其他配置中的环境变量设置为空字符串
+- zsh：`~/.zshrc`
+- bash：`~/.bashrc`
 
-### 3. 查看配置详情
+它会写入 PATH，并生成 `ctm-use` 和 `ctm-unset` 两个 shell 函数。
+
+写入内容示例：
+
+```bash
+# >>> ctm init >>>
+export PATH='/path/to/ctm-dir':"$PATH"
+
+ctm-use() {
+    local ctm_exports
+    local ctm_unsets
+    ctm_exports=$(ctm use "$@") || return
+    ctm_unsets=$(ctm unset) || return
+    eval "$ctm_unsets"
+    eval "$ctm_exports"
+    ctm show
+}
+
+ctm-unset() {
+    local ctm_unsets
+    ctm_unsets=$(ctm unset "$@") || return
+    eval "$ctm_unsets"
+}
+# <<< ctm init <<<
+```
+
+重复执行 `ctm init` 时，会更新 `# >>> ctm init >>>` 和 `# <<< ctm init <<<` 之间的配置块，不会重复追加。
+
+执行后重新打开 shell，或手动 source 对应配置文件：
+
+```bash
+source ~/.zshrc  # zsh
+source ~/.bashrc # bash
+```
+
+### 3. 切换配置
+
+推荐使用 `ctm init` 生成的 `ctm-use` 函数：
+
+```bash
+ctm-use 1
+```
+
+也可以手动执行：
+
+```bash
+ctm_exports=$(ctm use 1) && \
+ctm_unsets=$(ctm unset) && \
+eval "$ctm_unsets" && \
+eval "$ctm_exports" && \
+ctm show
+```
+
+### 4. 清理 CTM 管理的环境变量
+
+执行过 `ctm init` 并重新打开 shell，或 source 对应 rc 文件后，推荐使用：
+
+```bash
+ctm-unset
+```
+
+如果还没有初始化 shell，也可以手动执行：
+
+```bash
+eval "$(ctm unset)"
+```
+
+`ctm unset` 会读取所有 provider 中出现过的环境变量名，并输出对应的 unset 命令：
+
+```bash
+unset ANTHROPIC_API_KEY
+unset ANTHROPIC_BASE_URL
+```
+
+### 5. 查看配置详情
 
 查看当前配置：
 
@@ -101,33 +165,13 @@ ctm show
 ctm show 0
 ```
 
-### 4. 查看配置文件路径
+### 6. 查看配置文件路径
 
 ```bash
 ctm config
 ```
 
-### 5. 生成 Shell 初始化脚本
-
-```bash
-ctm init
-```
-
-这会输出一个 shell 函数定义，你可以添加到 `~/.bashrc` 或 `~/.zshrc`：
-
-```bash
-ctm-use() {
-    eval $(ctm use "$@")
-}
-```
-
-然后你就可以直接使用：
-
-```bash
-ctm-use 1  # 自动切换并设置环境变量
-```
-
-### 6. 帮助信息
+### 7. 帮助信息
 
 ```bash
 ctm help
@@ -135,14 +179,15 @@ ctm help
 
 ## 特性
 
-1. **自动环境变量管理**：切换配置时自动处理所有环境变量
-2. **环境变量隔离**：非当前配置的环境变量会被设置为空，避免残留
-3. **清晰的状态显示**：当前配置用绿色和 `*` 标记
-4. **简洁的代码结构**：使用 Cobra 框架，代码组织清晰
-5. **支持多种 Shell**：支持 bash、zsh、fish
+1. **自动环境变量管理**：切换配置时自动导出目标 provider 的环境变量
+2. **环境变量隔离**：`ctm-use` 会在切换成功后先 `unset` 所有 CTM 管理过的环境变量，再应用目标配置，避免旧配置残留
+3. **独立清理函数**：`ctm-unset` 可以单独清理所有 CTM 管理过的环境变量
+4. **自动 Shell 初始化**：`ctm init` 自动写入 `~/.bashrc` 或 `~/.zshrc`，并生成 `ctm-use` / `ctm-unset`
+5. **清晰的状态显示**：当前配置用绿色和 `*` 标记
+6. **简洁的代码结构**：使用 Cobra 框架，代码组织清晰
 
 ## 注意事项
 
-由于操作系统限制，子进程无法直接修改父进程的环境变量，因此需要使用 `eval $(ctm use <index>)` 的方式来应用环境变量。
+由于操作系统限制，子进程无法直接修改父进程的环境变量，因此需要使用 `eval "$(ctm use <index>)"` / `eval "$(ctm unset)"`，或使用 `ctm init` 生成的 `ctm-use <index>` / `ctm-unset` 来应用到当前 shell。
 
-建议使用 `ctm init` 生成的 shell 函数来简化操作。
+推荐先执行 `ctm init`，重新打开 shell 或 source 对应 rc 文件后，使用 `ctm-use <index>` 完成切换，使用 `ctm-unset` 清理 CTM 管理的环境变量。
