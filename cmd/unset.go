@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Guo-Chenxu/ctm/logic"
 	"github.com/spf13/cobra"
@@ -10,8 +11,8 @@ import (
 
 var unsetCmd = &cobra.Command{
 	Use:   "unset",
-	Short: "Unset all managed environment variables",
-	Long:  `Output shell commands to unset all environment variables managed by CTM.`,
+	Short: "Remove all managed environment variables",
+	Long:  `Remove every environment variable managed by CTM from Claude Code's settings file.`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		config, err := logic.LoadConfig()
@@ -21,26 +22,42 @@ var unsetCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		commands, err := buildUnsetCommands(config)
+		settings, err := logic.LoadClaudeSettings()
+		if err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			os.Exit(1)
+		}
+		env, err := settings.Env()
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		for _, command := range commands {
-			fmt.Fprintln(cmd.OutOrStdout(), command)
+		removed := make([]string, 0)
+		for _, key := range logic.GetAllEnvKeys(config) {
+			if _, exists := env[key]; exists {
+				delete(env, key)
+				removed = append(removed, key)
+			}
 		}
-	},
-}
 
-func buildUnsetCommands(config *logic.Config) ([]string, error) {
-	keys := logic.GetAllEnvKeys(config)
-	commands := make([]string, 0, len(keys))
-	for _, key := range keys {
-		if !isValidShellIdentifier(key) {
-			return nil, fmt.Errorf("invalid environment variable name %q", key)
+		out := cmd.OutOrStdout()
+		if len(removed) == 0 {
+			fmt.Fprintln(out, "No CTM-managed environment variables found.")
+			return
 		}
-		commands = append(commands, fmt.Sprintf("unset %s", key))
-	}
-	return commands, nil
+
+		if err := settings.SetEnv(env); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if err := logic.SaveClaudeSettings(settings); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Fprintf(out, "Removed %d variable(s) from %s\n", len(removed), logic.GetClaudeSettingsPath())
+		fmt.Fprintf(out, "  %s\n", strings.Join(removed, ", "))
+		fmt.Fprintln(out, "Restart Claude Code for the removal to take effect.")
+	},
 }

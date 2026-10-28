@@ -9,10 +9,11 @@ import (
 )
 
 var showCmd = &cobra.Command{
-	Use:   "show [index]",
-	Short: "Show provider details",
-	Long:  `Display detailed information about a provider. If no index is specified, shows the current provider.`,
-	Args:  cobra.MaximumNArgs(1),
+	Use:               "show [index]",
+	Short:             "Show provider details",
+	Long:              `Display detailed information about a provider. If no index is specified, shows the current provider.`,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: providerIndexCompletion,
 	Run: func(cmd *cobra.Command, args []string) {
 		config, err := logic.LoadConfig()
 		if err != nil {
