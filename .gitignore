@@ -120,3 +120,6 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,go,linux,macos,windows
 
 .claude
+
+# Build output
+/bin/

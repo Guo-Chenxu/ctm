@@ -38,8 +38,10 @@ ctm/
 ## 安装
 
 ```bash
-go build -o ctm
+make build
 ```
+
+二进制会生成在 `bin/ctm`。也可以直接使用 `go build -o bin/ctm .`。
 
 ## 配置文件
 
