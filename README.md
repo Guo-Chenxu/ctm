@@ -1,16 +1,6 @@
-# CTM - Configuration Token Manager
+# CTM - Claude Token Manager
 
-**本项目完全由 Claude 完成**
-
-一个用 Go 编写的命令行工具，用于管理多个配置和环境变量。
-
-## 写在前面
-
-本项目初衷是为了管理多个 claude api token，方便切换，现在写完看起来似乎可以应用到其他各种需要切换环境变量的情况。
-
-CTM 通过直接读写 Claude Code 的 `~/.claude/settings.json` 中的 `env` 字段来实现切换，命令执行即生效。
-
-另外一提，看到个平替的[免费使用 Claude Code 的方案](https://blyrin.cn/posts/cc-free/)，总之是用各平台免费提供的模型来代替 Claude，目前简单用了一下，简单任务还不错（得益于 Claude Code 的强大），但是相较于 Claude Sonnet 4.5 模型还是差点意思，可以考虑两种方案综合使用。
+一个用 Go 编写的命令行工具，用于管理多个 Claude 配置，方便终端使用。
 
 ## 项目结构
 
